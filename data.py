@@ -1,5 +1,6 @@
 import pyconll
 from gensim.models.keyedvectors import KeyedVectors
+from torch.utils.data import Dataset
 
 from parser import ParseState, Transition
 
@@ -188,3 +189,26 @@ class Encoder:
 
     def encode_pair(self, pair):
         return self.encode_state(*pair[0]), self.encode_target(*pair[1])
+
+
+class CorpusDataset(Dataset):
+    def __init__(self, conll, encoder):
+        super().__init__()
+        self.encoder = encoder
+        self.data = self.get_encoded_samples(conll)
+
+    def get_encoded_samples(conll):
+        """Given conll object, get input and targets for each sentence."""
+        res = []
+        for i, sentence_obj in enumerate(conll):
+            sentence = get_sentence(sentence_obj)
+            oracle_deps = get_oracle_deps(sentence_obj.to_tree())
+            history = get_deps_transitions(sentence, oracle_deps)[1]
+            res.extend(self.encoder.encode_pair(t) for t in history)
+        return res
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
