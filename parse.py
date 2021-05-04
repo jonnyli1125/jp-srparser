@@ -14,10 +14,10 @@ class ParseState:
 
     @property
     def complete(self):
-        return len(state.stack) <= 1 and state.next >= len(state.sentence)
+        return len(self.stack) <= 1 and self.next >= len(self.sentence)
 
     def state(self):
-        return (self.sentence, self.stack, self.next, self.deps)
+        return (self.sentence, self.stack[:], self.next, frozenset(self.deps))
 
     def parse_transition(self, transition, deprel):
         if transition == Transition.SHIFT:
@@ -28,30 +28,30 @@ class ParseState:
         elif transition == Transition.LEFT_ARC:
             if len(self.stack) < 2:
                 raise ValueError("Stack index out of range")
-            self.deps.append((stack[-1], stack[-2], deprel))
-            del stack[-2]
+            self.deps.add((self.stack[-1], self.stack[-2], deprel))
+            del self.stack[-2]
         elif transition == Transition.RIGHT_ARC:
             if len(self.stack) < 2:
                 raise ValueError("Stack index out of range")
-            self.deps.append((stack[-2], stack[-1], deprel))
-            stack.pop()
+            self.deps.add((self.stack[-2], self.stack[-1], deprel))
+            self.stack.pop()
         else:
             raise ValueError("Invalid transition")
 
     def get_oracle(self, oracle_deps):
         s = self.stack
 
-        def nested_deps():
-            for (i, j), l in oracle_deps.items():
-                if i == s[-1] and (i, j, l) not in self.deps:
-                    return True
-            return False
+        def nested_deps_added():
+            for (j, k), l in oracle_deps.items():
+                if s[-1] == j and (j, k, l) not in self.deps:
+                    return False
+            return True
 
         if len(s) < 2:
             return Transition.SHIFT, None
         elif (s[-1], s[-2]) in oracle_deps:
             return Transition.LEFT_ARC, oracle_deps[(s[-1], s[-2])]
-        elif (s[-2], s[-1]) in oracle_deps and not nested_deps():
+        elif (s[-2], s[-1]) in oracle_deps and nested_deps_added():
             return Transition.RIGHT_ARC, oracle_deps[(s[-2], s[-1])]
         else:
             return Transition.SHIFT, None

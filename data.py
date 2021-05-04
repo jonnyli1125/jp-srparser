@@ -1,6 +1,7 @@
 import pyconll
 from gensim.models.keyedvectors import KeyedVectors
 from torch.utils.data import Dataset
+import numpy as np
 
 from parse import ParseState, Transition
 
@@ -37,12 +38,12 @@ def get_n_rightmost_deps(deps, head_i, n):
 
 def get_oracle_deps(tree):
     """Given pyconll tree, return (head, dep) -> deprel dictionary."""
-    res = {}
+    res = {(0, int(tree.data.id)): tree.data.deprel}
     q = [tree]
     while q:
         node = q.pop()
         for child in node:
-            res[(node.data.id, child.data.id)] = child.data.deprel
+            res[(int(node.data.id), int(child.data.id))] = child.data.deprel
             q.append(child)
     return res
 
@@ -52,8 +53,8 @@ def get_sentence(sentence):
     return [(t.form, t.upos) for t in sentence]
 
 
-def get_deps_transitions(sentence, oracle_deps):
-    """Given sentence and oracle_deps, return deps and transition history."""
+def get_transitions(sentence, oracle_deps):
+    """Given sentence and oracle_deps, return transition history."""
     state = ParseState(sentence)
     history = []
     while not state.complete:
@@ -61,17 +62,22 @@ def get_deps_transitions(sentence, oracle_deps):
         state.parse_transition(transition, deprel)
         history.append((state.state(), (transition, deprel)))
     assert state.deps == {(i, j, l) for (i, j), l in oracle_deps.items()}
-    return state.deps, history
+    return history
 
 
-def get_encoded_samples(self, conll, encoder):
+def get_encoded_samples(conll, encoder):
     """Given conll object, get input and targets for each sentence."""
     res = []
-    for i, sentence_obj in enumerate(conll):
-        sentence = get_sentence(sentence_obj)
-        oracle_deps = get_oracle_deps(sentence_obj.to_tree())
-        history = get_deps_transitions(sentence, oracle_deps)[1]
-        res.extend(self.encoder.encode_sample(t) for t in history)
+    dropped = 0
+    for sentence_obj in conll:
+        try:
+            sentence = get_sentence(sentence_obj)
+            oracle_deps = get_oracle_deps(sentence_obj.to_tree())
+            history = get_transitions(sentence, oracle_deps)
+            res.extend(encoder.encode_sample(t) for t in history)
+        except ValueError:
+            dropped += 1
+    print("Dropped {} sentences.".format(dropped))
     return res
 
 
@@ -95,10 +101,10 @@ class Encoder:
     unk_deprel = "_"
 
     def __init__(self, word_list, tag_list, deprel_list):
-        self.id2word = [root_word] + word_list + [unk_word]
-        self.id2tag = [root_tag] + tag_list + [unk_tag]
+        self.id2word = [self.root_word] + word_list + [self.unk_word]
+        self.id2tag = [self.root_tag] + tag_list + [self.unk_tag]
         # deprel list already includes root deprel
-        self.id2deprel = deprel_list + [unk_deprel]
+        self.id2deprel = deprel_list + [self.unk_deprel]
         self.word2id = {word: i for (i, word) in enumerate(self.id2word)}
         self.tag2id = {tag: i for (i, tag) in enumerate(self.id2tag)}
         self.deprel2id = {dr: i for (i, dr) in enumerate(self.id2deprel)}
@@ -147,28 +153,30 @@ class Encoder:
             buffer_word, buffer_tag = sentence[next+i]
             word_ids[3+i] = word2id(buffer_word)
             tag_ids[3+i] = tag2id(buffer_tag)
-        for i in range(min(len(stack)), 2):
-            for j, dep in get_n_leftmost_deps(deps, stack[-1-i], 2):
+        for i in range(min(len(stack), 2)):
+            for j, dep in enumerate(get_n_leftmost_deps(deps, stack[-1-i], 2)):
                 dep_word, dep_tag = sentence[dep[1]]
                 deprel = dep[2]
                 word_ids[6+6*i+j] = word2id(dep_word)
                 tag_ids[6+6*i+j] = tag2id(dep_tag)
                 deprel_ids[6*i+j] = deprel2id(deprel)
                 if j == 0:
-                    for k, inner_dep in get_n_leftmost_deps(deps, dep, 1):
+                    leftmost_leftmost = get_n_leftmost_deps(deps, dep[1], 1)
+                    for k, inner_dep in enumerate(leftmost_leftmost):
                         inner_dep_word, inner_dep_tag = sentence[inner_dep[1]]
                         inner_deprel = inner_dep[2]
                         word_ids[10+6*i] = word2id(inner_dep_word)
                         tag_ids[10+6*i] = tag2id(inner_dep_tag)
                         deprel_ids[4+6*i] = deprel2id(inner_deprel)
-            for j, dep in get_n_rightmost_deps(deps, stack[-1-i], 2):
+            for j, dep in enumerate(get_n_rightmost_deps(deps, stack[-1-i], 2)):
                 dep_word, dep_tag = sentence[dep[1]]
                 deprel = dep[2]
                 word_ids[8+6*i+j] = word2id(dep_word)
                 tag_ids[8+6*i+j] = tag2id(dep_tag)
                 deprel_ids[2+6*i+j] = deprel2id(deprel)
                 if j == 0:
-                    for k, inner_dep in get_n_rightmost_deps(deps, dep, 1):
+                    rightmost_rightmost = get_n_rightmost_deps(deps, dep[1], 1)
+                    for k, inner_dep in enumerate(rightmost_rightmost):
                         inner_dep_word, inner_dep_tag = sentence[inner_dep[1]]
                         inner_deprel = inner_dep[2]
                         word_ids[11+6*i] = word2id(inner_dep_word)
