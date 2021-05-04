@@ -13,7 +13,7 @@ from data import (get_word2vec, get_train_data, get_dev_data, get_test_data,
 class ParserModel(nn.Module):
     def __init__(self, word2vec, n_word_ids, n_tag_ids, n_deprel_ids,
                  n_word_features, n_tag_features, n_deprel_features, n_classes,
-                 embed_size=None, dropout=0.5, hidden_size=200):
+                 embed_size=None, dropout=0.5, hidden_size=16):
         super().__init__()
         # init embeddings
         if not embed_size:
