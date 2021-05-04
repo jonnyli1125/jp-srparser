@@ -2,7 +2,7 @@ import pyconll
 from gensim.models.keyedvectors import KeyedVectors
 from torch.utils.data import Dataset
 
-from parser import ParseState, Transition
+from parse import ParseState, Transition
 
 
 TRAIN_PATH = 'corpora/ja_gsd-ud/ja_gsd-ud-train.conllu'
@@ -32,7 +32,7 @@ def get_n_leftmost_deps(deps, head_i, n):
 
 
 def get_n_rightmost_deps(deps, head_i, n):
-    return sorted(dep for dep in deps if head_i == dep[0], reverse=True)[:n]
+    return sorted((dep for dep in deps if head_i == dep[0]), reverse=True)[:n]
 
 
 def get_oracle_deps(tree):
@@ -62,6 +62,17 @@ def get_deps_transitions(sentence, oracle_deps):
         history.append((state.state(), (transition, deprel)))
     assert state.deps == {(i, j, l) for (i, j), l in oracle_deps.items()}
     return state.deps, history
+
+
+def get_encoded_samples(self, conll, encoder):
+    """Given conll object, get input and targets for each sentence."""
+    res = []
+    for i, sentence_obj in enumerate(conll):
+        sentence = get_sentence(sentence_obj)
+        oracle_deps = get_oracle_deps(sentence_obj.to_tree())
+        history = get_deps_transitions(sentence, oracle_deps)[1]
+        res.extend(self.encoder.encode_sample(t) for t in history)
+    return res
 
 
 def get_word_tag_deprel_lists(word2vec, conll):
@@ -167,45 +178,40 @@ class Encoder:
 
     def encode_target(self, transition, deprel):
         """
-        Transition + deprel vector format:
+        Returns a transition + deprel (labelled) vector, in the format:
 
-        one-hot encoded vector, where indexes represent:
+        One-hot encoded vector, where indexes represent:
             - 0: SHIFT
             - [1, n+1): LEFT_ARC, deprel 1+i
             - [n+1, 2n+1): RIGHT_ARC, deprel n+1+i
         where n = len(id2deprel), 0 <= i < n
+
+        Also returns a transition only (unlabelled) vector of the same size,
+        where each value is 1 if the transition matches.
         """
         n = len(self.id2deprel)
-        res = np.zeros(2*n+1)
+        labelled_vec, unlabelled_vec = np.zeros(2*n+1), np.zeros(2*n+1)
         if transition == Transition.SHIFT:
-            res[0] = 1
+            labelled_vec[0] = 1
+            unlabelled_vec[0] = 1
         else:
             i = self.deprel2id.get(deprel, self.unk_deprel_id)
             if transition == Transition.LEFT_ARC:
-                res[1+i] = 1
+                labelled_vec[1+i] = 1
+                unlabelled_vec[1:n+1] = 1
             else:
-                res[n+1+i] = 1
-        return res
+                labelled_vec[n+1+i] = 1
+                unlabelled_vec[n+1:] = 1
+        return labelled_vec, unlabelled_vec
 
-    def encode_pair(self, pair):
-        return self.encode_state(*pair[0]), self.encode_target(*pair[1])
+    def encode_sample(self, pair):
+        return (*self.encode_state(*pair[0]), *self.encode_target(*pair[1]))
 
 
 class CorpusDataset(Dataset):
     def __init__(self, conll, encoder):
         super().__init__()
-        self.encoder = encoder
-        self.data = self.get_encoded_samples(conll)
-
-    def get_encoded_samples(conll):
-        """Given conll object, get input and targets for each sentence."""
-        res = []
-        for i, sentence_obj in enumerate(conll):
-            sentence = get_sentence(sentence_obj)
-            oracle_deps = get_oracle_deps(sentence_obj.to_tree())
-            history = get_deps_transitions(sentence, oracle_deps)[1]
-            res.extend(self.encoder.encode_pair(t) for t in history)
-        return res
+        self.data = get_encoded_samples(conll, encoder)
 
     def __len__(self):
         return len(self.data)
