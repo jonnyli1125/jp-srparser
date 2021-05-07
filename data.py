@@ -1,3 +1,4 @@
+import codecs
 import pyconll
 from gensim.models.keyedvectors import KeyedVectors
 from torch.utils.data import Dataset
@@ -93,12 +94,30 @@ def get_word_tag_deprel_lists(word2vec, conll):
     return word_list, sorted(tag_list), sorted(deprel_list)
 
 
+def load_word_tag_deprel_lists(path):
+    lines = []
+    with codecs.open(path, 'r', 'utf-8') as file:
+        lines = file.readlines()
+    return tuple(line.strip().split(',') for line in lines)
+
+
+def save_word_tag_deprel_lists(path, word_list, tag_list, deprel_list):
+    with codecs.open(path, 'w', 'utf-8') as file:
+        file.write(",".join(word_list) + "\n")
+        file.write(",".join(tag_list) + "\n")
+        file.write(",".join(deprel_list) + "\n")
+
+
 class Encoder:
     root_word = None
     root_tag = "ROOT"
     unk_word = "_"
     unk_tag = "_"
     unk_deprel = "_"
+
+    n_word_features = 18
+    n_tag_features = 18
+    n_deprel_features = 12
 
     def __init__(self, word_list, tag_list, deprel_list):
         self.id2word = [self.root_word] + word_list + [self.unk_word]
@@ -114,6 +133,7 @@ class Encoder:
         self.null_word_id = len(self.id2word)
         self.null_tag_id = len(self.id2tag)
         self.null_deprel_id = len(self.id2deprel)
+        self.n_classes = 2 * len(self.id2deprel) + 1
 
     def encode_state(self, sentence, stack, next, deps):
         """

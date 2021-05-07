@@ -7,17 +7,29 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from data import (get_word2vec, get_train_data, get_dev_data, get_test_data,
-                  get_word_tag_deprel_lists, Encoder, CorpusDataset)
+                  get_word_tag_deprel_lists, load_word_tag_deprel_lists,
+                  save_word_tag_deprel_lists, Encoder, CorpusDataset)
 
 
 class ParserModel(nn.Module):
-    def __init__(self, word2vec, n_word_ids, n_tag_ids, n_deprel_ids,
-                 n_word_features, n_tag_features, n_deprel_features, n_classes,
-                 embed_size=None, dropout=0.5, hidden_size=16):
+    def __init__(self, encoder=None, word2vec=None, dropout=0.5,
+                 hidden_size=16):
         super().__init__()
+
+        if not word2vec:
+            word2vec = get_word2vec()
+        if not encoder:
+            encoder = Encoder(*load_word_tag_deprel_lists("model_lists.txt"))
+        n_word_ids = len(encoder.id2word) + 1
+        n_tag_ids = len(encoder.id2tag) + 1
+        n_deprel_ids = len(encoder.id2deprel) + 1
+        n_word_features = Encoder.n_word_features
+        n_tag_features = Encoder.n_tag_features
+        n_deprel_features = Encoder.n_deprel_features
+        n_classes = encoder.n_classes
+        embed_size = word2vec.vector_size
+
         # init embeddings
-        if not embed_size:
-            embed_size = word2vec.vector_size
         self.word_embedding = self.init_word_embedding(word2vec)
         self.tag_embedding = nn.Embedding(n_tag_ids, embed_size)
         self.deprel_embedding = nn.Embedding(n_deprel_ids, embed_size)
@@ -118,6 +130,9 @@ def main():
     word_list, tag_list, deprel_list = get_word_tag_deprel_lists(word2vec, all)
     print("Corpus and embedding loaded. {} words, {} tags, {} deprels".format(
         len(word_list), len(tag_list), len(deprel_list)))
+    save_word_tag_deprel_lists(
+        "model_lists.txt", word_list, tag_list, deprel_list)
+    print("Saved word/tag/deprel lists to model_lists.txt.")
 
     encoder = Encoder(word_list, tag_list, deprel_list)
     print("Generating datasets from corpus...")
@@ -127,16 +142,7 @@ def main():
     print("Datasets generated. Train: n={}, Dev: n={}, Test: n={}".format(
         len(train_dataset), len(dev_dataset), len(test_dataset)))
 
-    n_word_ids = len(encoder.id2word) + 1
-    n_tag_ids = len(encoder.id2tag) + 1
-    n_deprel_ids = len(encoder.id2deprel) + 1
-    n_word_features = len(dev_dataset[0][0])
-    n_tag_features = len(dev_dataset[0][1])
-    n_deprel_features = len(dev_dataset[0][2])
-    n_classes = len(dev_dataset[0][3])
-    model = ParserModel(word2vec, n_word_ids, n_tag_ids, n_deprel_ids,
-                        n_word_features, n_tag_features, n_deprel_features,
-                        n_classes)
+    model = ParserModel(encoder, word2vec)
     print("Begin training...")
     train(train_dataset, dev_dataset, model)
     print("Training finished.")
