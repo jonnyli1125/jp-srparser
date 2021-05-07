@@ -14,7 +14,7 @@ from data import (get_word2vec, get_train_data, get_dev_data, get_test_data,
 
 class ParserModel(nn.Module):
     def __init__(self, encoder=None, word2vec=None, dropout=0.5,
-                 hidden_size=16):
+                 hidden_size=100):
         super().__init__()
 
         if not word2vec:
@@ -88,7 +88,7 @@ def train_epoch(dataloader, model, loss_fn, optimizer):
         optimizer.step()
 
         if i % 100 == 0:
-            print("[Batch {}/{}] Loss: {}".format(i, n_batches, loss.item()))
+            print("[Batch {}/{}] Loss: {}".format(i+1, n_batches, loss.item()))
 
 
 def train(train_dataset, dev_dataset, model, batch_size=2048, n_epochs=10,
@@ -98,10 +98,10 @@ def train(train_dataset, dev_dataset, model, batch_size=2048, n_epochs=10,
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr)
     for i in range(n_epochs):
-        print("Begin epoch {}/{}...".format(i, n_epochs))
+        print("Begin epoch {}/{}...".format(i+1, n_epochs))
         train_epoch(train_dl, model, loss_fn, optimizer)
         las, uas = evaluate(dev_dl, model)
-        print("[Epoch {}/{}] LAS: {}, UAS: {}".format(i, n_epochs, las, uas))
+        print("[Epoch {}/{}] LAS: {}, UAS: {}".format(i+1, n_epochs, las, uas))
 
 
 def evaluate(dataloader, model):

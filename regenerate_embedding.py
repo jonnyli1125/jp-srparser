@@ -12,7 +12,7 @@ train = get_train_data()
 visited = set()
 gsd_vocab = []
 gsd_vectors = []
-vec_size = 4
+vec_size = 50
 count = 0
 for s in train:
     for t in s:
