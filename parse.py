@@ -56,10 +56,11 @@ class ParseState:
         else:
             return Transition.SHIFT, None
 
-def parse(self, sentence, model):
-    """Parse sentence into dependencies using model."""
+
+def parse(sentence, model):
+    """Shift-reduce parse a tokenized sentence into its dependencies."""
     state = ParseState(sentence)
     while not state.complete:
-        transition, deprel = model.predict(state)  # TODO: implement
+        transition, deprel = model.predict(state.state())
         state.parse_transition(transition, deprel)
     return state.deps

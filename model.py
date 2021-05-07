@@ -28,6 +28,7 @@ class ParserModel(nn.Module):
         n_deprel_features = Encoder.n_deprel_features
         n_classes = encoder.n_classes
         embed_size = word2vec.vector_size
+        self.encoder = encoder
 
         # init embeddings
         self.word_embedding = self.init_word_embedding(word2vec)
@@ -63,6 +64,13 @@ class ParserModel(nn.Module):
         X_word, X_tag, X_deprel = X_word.int(), X_tag.int(), X_deprel.int()
         X = self.get_concat_embedding(X_word, X_tag, X_deprel)
         return self.linear_stack(X)
+
+    def predict(self, state):
+        encoded_state = self.encoder.encode_state(*state)
+        with torch.no_grad():
+            logits = self(encoded_state)
+            return encoder.decode_target(logits)
+        raise ValueError("Unable to predict transition.")
 
 
 def train_epoch(dataloader, model, loss_fn, optimizer):

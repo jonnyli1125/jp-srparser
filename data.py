@@ -235,6 +235,16 @@ class Encoder:
     def encode_sample(self, pair):
         return (*self.encode_state(*pair[0]), *self.encode_target(*pair[1]))
 
+    def decode_target(self, logits):
+        n = len(self.id2deprel)
+        i = np.argmax(logits)
+        if i == 0:
+            return Transition.SHIFT, None
+        elif i < n+1:
+            return Transition.LEFT_ARC, self.id2deprel[i-1]
+        else:
+            return Transition.RIGHT_ARC, self.id2deprel[i-n-1]
+
 
 class CorpusDataset(Dataset):
     def __init__(self, conll, encoder):
