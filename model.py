@@ -8,7 +8,8 @@ from torch.utils.data import DataLoader
 
 from data import (get_word2vec, get_train_data, get_dev_data, get_test_data,
                   get_word_tag_deprel_lists, load_word_tag_deprel_lists,
-                  save_word_tag_deprel_lists, Encoder, CorpusDataset)
+                  save_word_tag_deprel_lists, Encoder, CorpusDataset,
+                  MODEL_LISTS_PATH)
 
 
 class ParserModel(nn.Module):
@@ -19,7 +20,7 @@ class ParserModel(nn.Module):
         if not word2vec:
             word2vec = get_word2vec()
         if not encoder:
-            encoder = Encoder(*load_word_tag_deprel_lists("model_lists.txt"))
+            encoder = Encoder(*load_word_tag_deprel_lists(MODEL_LISTS_PATH))
         n_word_ids = len(encoder.id2word) + 1
         n_tag_ids = len(encoder.id2tag) + 1
         n_deprel_ids = len(encoder.id2deprel) + 1
@@ -139,8 +140,8 @@ def main():
     print("Corpus and embedding loaded. {} words, {} tags, {} deprels".format(
         len(word_list), len(tag_list), len(deprel_list)))
     save_word_tag_deprel_lists(
-        "model_lists.txt", word_list, tag_list, deprel_list)
-    print("Saved word/tag/deprel lists to model_lists.txt.")
+        MODEL_LISTS_PATH, word_list, tag_list, deprel_list)
+    print("Saved word/tag/deprel lists to {}.".format(MODEL_LISTS_PATH))
 
     encoder = Encoder(word_list, tag_list, deprel_list)
     print("Generating datasets from corpus...")

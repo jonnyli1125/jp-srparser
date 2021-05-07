@@ -11,6 +11,7 @@ TRAIN_PATH = 'corpora/ja_gsd-ud/ja_gsd-ud-train.conllu'
 DEV_PATH = 'corpora/ja_gsd-ud/ja_gsd-ud-dev.conllu'
 TEST_PATH = 'corpora/ja_gsd-ud/ja_gsd-ud-test.conllu'
 WORD2VEC_PATH = 'embeddings/jawiki_gsd_word2vec.txt'
+MODEL_LISTS_PATH = 'model_lists.txt'
 
 
 def get_train_data():
