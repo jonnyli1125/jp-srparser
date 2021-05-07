@@ -99,14 +99,14 @@ def load_word_tag_deprel_lists(path):
     lines = []
     with codecs.open(path, 'r', 'utf-8') as file:
         lines = file.readlines()
-    return tuple(line.strip().split(',') for line in lines)
+    return tuple(line.strip().split(' ') for line in lines)
 
 
 def save_word_tag_deprel_lists(path, word_list, tag_list, deprel_list):
     with codecs.open(path, 'w', 'utf-8') as file:
-        file.write(",".join(word_list) + "\n")
-        file.write(",".join(tag_list) + "\n")
-        file.write(",".join(deprel_list) + "\n")
+        file.write(" ".join(word_list) + "\n")
+        file.write(" ".join(tag_list) + "\n")
+        file.write(" ".join(deprel_list) + "\n")
 
 
 class Encoder:

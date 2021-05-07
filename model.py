@@ -21,7 +21,6 @@ class ParserModel(nn.Module):
             word2vec = get_word2vec()
         if not encoder:
             encoder = Encoder(*load_word_tag_deprel_lists(MODEL_LISTS_PATH))
-        n_word_ids = len(encoder.id2word) + 1
         n_tag_ids = len(encoder.id2tag) + 1
         n_deprel_ids = len(encoder.id2deprel) + 1
         n_word_features = Encoder.n_word_features
@@ -67,10 +66,12 @@ class ParserModel(nn.Module):
         return self.linear_stack(X)
 
     def predict(self, state):
-        encoded_state = self.encoder.encode_state(*state)
+        X_word, X_tag, X_deprel = self.encoder.encode_state(*state)
         with torch.no_grad():
-            logits = self(encoded_state)
-            return encoder.decode_target(logits)
+            logits = self(torch.tensor(X_word).reshape(1, -1),
+                          torch.tensor(X_tag).reshape(1, -1),
+                          torch.tensor(X_deprel).reshape(1, -1))
+            return self.encoder.decode_target(logits)
         raise ValueError("Unable to predict transition.")
 
 
