@@ -61,8 +61,8 @@ def get_transitions(sentence, oracle_deps):
     history = []
     while not state.complete:
         transition, deprel = state.get_oracle(oracle_deps)
-        state.parse_transition(transition, deprel)
         history.append((state.state(), (transition, deprel)))
+        state.parse_transition(transition, deprel)
     assert state.deps == {(i, j, l) for (i, j), l in oracle_deps.items()}
     return history
 
