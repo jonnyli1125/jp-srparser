@@ -8,9 +8,11 @@ TL;DR Summary:
 3. Trained neural network with [UD Japanese GSD treebank](https://universaldependencies.org/treebanks/ja_gsd/index.html) and pretrained word embedding weights from [Wikipedia2vec](https://wikipedia2vec.github.io/wikipedia2vec/pretrained/).
 
 ## Training
-Run `python3 model.py` to execute training loop.  
-Model is saved in PyTorch model state format to `model.pth`.  
-The model should be able to achieve above .98 LAS (Labelled Attachment Score), .99 UAS (Unlabelled Attachment Score) with default hyperparameters.
+Run `python3 model.py` to execute training loop.
+
+Model weights are saved in PyTorch model state format to `model.pth`. Other relevant files such as `model_lists.txt` and `embeddings/jawiki_gsd_word2vec.txt` are also required to load the model.
+
+The model should generally converge at approximately .96 LAS (Labelled Attachment Score), .97 UAS (Unlabelled Attachment Score). Increasing the hyperparameters (embed size, hidden size) beyond the specified defaults may marginally improve accuracy.
 
 ## References
 - http://www.cs.toronto.edu/~gpenn/csc485/a1.pdf
