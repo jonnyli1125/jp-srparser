@@ -7,6 +7,9 @@ TL;DR Summary:
 2. Implemented a neural network using PyTorch to predict the next action given a parser state.
 3. Trained neural network with [UD Japanese GSD treebank](https://universaldependencies.org/treebanks/ja_gsd/index.html) and pretrained word embedding weights from [Wikipedia2vec](https://wikipedia2vec.github.io/wikipedia2vec/pretrained/).
 
+## Example/Visualization
+Example usage and dependency tree visualization in a Google Colab notebook [here](https://colab.research.google.com/drive/1YiIkboDmyrHEpjsTM08i_9ixMtinniKj?usp=sharing).
+
 ## Training
 Run `python3 model.py` to execute training loop.
 
